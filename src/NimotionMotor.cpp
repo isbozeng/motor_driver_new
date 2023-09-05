@@ -7,8 +7,9 @@ static const std::string GREEN_BOLD = "\033[1;32m";
 static const std::string RED_BOLD = "\033[1;31m";
 static const std::string RESET_FORMAT = "\033[0m";
 
-nimotionMotor::nimotionMotor(uint32_t id, bool inverse)
+nimotionMotor::nimotionMotor(uint32_t id, bool inverse, uint32_t res)
     :CtrlMotorInterface(id, inverse)
+    ,resolution(res)
 {
 
 }

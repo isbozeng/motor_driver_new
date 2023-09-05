@@ -10,7 +10,7 @@
 class nimotionMotor : public CtrlMotorInterface
 {
 public:
-    nimotionMotor(uint32_t id, bool inverse = false);
+    nimotionMotor(uint32_t id, bool inverse = false, uint32_t res = 10000);
     virtual ~nimotionMotor();
     virtual int32_t init() override;//电机初始化
     virtual int32_t setMotorPosition(double pos) override;//设置电机位置角度,单位rad
