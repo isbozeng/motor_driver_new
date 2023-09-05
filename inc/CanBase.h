@@ -161,18 +161,18 @@ public:
         can_bus_callback.this_p = this_p;
         std::lock_guard<std::mutex> lock(mtx);
         can_bus_callback_list_.push_back(can_bus_callback);
-    };
+    }
 
     virtual ssize_t Transmit(CanTxMsg *TxMessage, unsigned int Len)
     { /*printf("virtual ssize_t Transmit \r\n");*/
         return -1;
-    };
+    }
     virtual ssize_t Receive(CanRxMsg *RxMessage, uint32_t)
     {
         printf("virtual ssize_t Receive \r\n");
         return -1;
-    };
-    virtual void GetErrorCode(error_code_t &){};
+    }
+    virtual void GetErrorCode(error_code_t &){}
     /**
      *
      *
@@ -184,10 +184,10 @@ class CanBusDemo : public CanBase
 {
 public:
 public:
-    CanBusDemo(void){};
-    ~CanBusDemo(void){};
+    CanBusDemo(void){}
+    ~CanBusDemo(void){}
 
-    ssize_t Transmit(CanTxMsg *TxMessage, unsigned int len) { printf("virtual ssize_t Transmit"); return len;};
+    ssize_t Transmit(CanTxMsg *TxMessage, unsigned int len) { printf("virtual ssize_t Transmit"); return len;}
     ssize_t Receive(CanRxMsg *RxMessage, uint32_t len) { printf("virtual ssize_t Receive"); return len;}
 
 protected:
