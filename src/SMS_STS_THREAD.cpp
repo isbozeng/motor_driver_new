@@ -111,7 +111,7 @@ namespace servo
       // if (moveCmd)
       // {
       //   std::cout<<"servoCnt:"<<servoCnt.load()<<std::endl;
-        RegWriteAction();
+      RegWriteAction();
       // }
       // servoMoveCnt = 0;
       usleep(5 * 1000);

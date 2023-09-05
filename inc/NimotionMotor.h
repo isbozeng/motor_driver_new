@@ -124,9 +124,12 @@ private:
     int32_t cur_vel = 0;
     int32_t cur_pos = 0;
     uint32_t det_pos = 100;
+    uint32_t resolution = 10000;
+    double reduction = 1.0;
     double angle = 0.0;
     bool isOnline = false;
-    bool isEnable = true;
+    bool isEnable = false;
+    bool isRecPos = false;
 
     bool homeCmd = false;
     bool enableCmd = false;
@@ -146,6 +149,7 @@ private:
 
     void switchState();
     void run();
+    int32_t getError();
     void recMsgCallback(CanBase::CanRxMsg msg);
 
 };

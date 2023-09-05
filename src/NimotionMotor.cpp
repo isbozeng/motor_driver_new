@@ -71,11 +71,11 @@ void nimotionMotor::run()
                     << " id:" << (int)nodeID_
                     << " error 0x:" << static_cast<int32_t>(error_code)
                     << " mode:" << static_cast<int32_t>(nimotion_mode)
-                    << " cur_pos:" << cur_pos * 360.0 / 10000.0 / reduction << " pos_cmd:" << pos_cmd * 360.0 / 10000.0 / reduction
+                    << " cur_pos:" << cur_pos * 360.0 / resolution / reduction << " pos_cmd:" << pos_cmd * 360.0 / resolution / reduction
                     << " cur_vel:" << cur_vel * 6.0 / reduction
-                    << " vel_cmd:" << vel_cmd * 60.0 * 6 / (10000.0 * reduction)
+                    << " vel_cmd:" << vel_cmd * 60.0 * 6 / (resolution * reduction)
                     << " in_state:" << (int)nimotion_state
-                    << " out_state:" << (int)state<< RESET_FORMAT << std::endl;//
+                    << RESET_FORMAT << std::endl;//
         #endif
 
         //     std::cout << GREEN_BOLD << "nimotion_state:" <<(int)nimotion_state <<
@@ -117,7 +117,7 @@ void nimotionMotor::run()
         break;
         case SWITCH_ON:
         {
-            if (statusword.switchOn != 1)
+            if (statusword.switchOn != 1 || isEnable)
             {
                 msg.StdId = 0x200 | nodeID_;
                 msg.DLC = 3;
@@ -160,7 +160,7 @@ void nimotionMotor::run()
                 resetCmd = false;
             }
             std::cout << GREEN_BOLD << "NODE_ID:" << (uint32_t)nodeID_ << " CLEAR_ERROR"
-                    << " error_code:" << (int32_t)error_code << RESET_FORMAT << std::endl;
+                    << " error_code:" << getError() << RESET_FORMAT << std::endl;
         }
         break;
         case HOMING:
@@ -368,6 +368,7 @@ void nimotionMotor::recMsgCallback(CanBase::CanRxMsg msg)
     case (0x480):
     {
         cur_pos = *((int32_t *)&msg.Data);
+        isRecPos = true;
         // if (!isOnline)
         // {
         //     pos_cmd = cur_pos;//掉线恢复后不能运动
@@ -451,9 +452,11 @@ void nimotionMotor::recMsgCallback(CanBase::CanRxMsg msg)
     now_time = std::chrono::steady_clock::now();
     auto elapsedTime = now_time - last_time;
     int32_t delt = std::chrono::duration_cast<std::chrono::seconds>(elapsedTime).count();
+    // std::cout<<"delt:"<<delt<<std::endl;
     if (delt > timeout)
     {
         isOnline = false;
+        isRecPos = false;
         std::cout << RED_BOLD << "nodeID_:" << (int)nodeID_ << " is offline!" << RESET_FORMAT << std::endl;
     }
 }
@@ -461,6 +464,7 @@ void nimotionMotor::recMsgCallback(CanBase::CanRxMsg msg)
 void nimotionMotor::switchState()
 {
     isEnable = (bool)statusword.enableOperation;
+                    
     if (!isOnline) // 离线状态
     {
         nimotion_state = START_NODE;
@@ -473,7 +477,7 @@ void nimotionMotor::switchState()
         }
         else
         {
-            nimotion_state = SWITCH_ON; // disable motor
+            // nimotion_state = SWITCH_ON; // disable motor
         }
         std::cout << RED_BOLD << "nodeID_:" << (int)nodeID_ << " error:" << std::hex << (uint32_t)error_code <<std::dec << RESET_FORMAT << std::endl;
     }
@@ -495,7 +499,19 @@ void nimotionMotor::switchState()
         {
             if (enableCmd)
             {
-                pos_cmd = cur_pos; // 使能后不能运动，指令清除
+                if (nimotion_mode == IP_MODE)
+                {
+                    pos_cmd = cur_pos; // 使能后不能运动，指令清除
+                    CanBase::CanTxMsg msg;
+                    msg.ExtId   = 0x00;     // not used at all
+                    msg.IDE     = CanBase::CAN_ID_STD;
+                    msg.RTR     = CanBase::CAN_RTR_DATA;        // data frame
+                    msg.StdId   = 0x400 | nodeID_;
+                    msg.DLC     = 4; 
+                    *((int32_t *)&msg.Data) = cur_pos;
+                    can_bus_->Transmit(msg); 
+                    can_bus_->Transmit(msg);  
+                }
                 nimotion_state = SET_ENABLE;
             }
         }
@@ -522,124 +538,126 @@ void nimotionMotor::switchState()
 
 int32_t nimotionMotor::setMotorPosition(double pos)
 {
-    int32_t ret = CMD_SUCCESS;
     if (error_code != 0)
     {
-        if (isEnable && nimotion_mode == IP_MODE)    
-        {
-            // int reverse = 1;
-            // if(inverse_direction_ && pos < 0.0)
-            // {
-            //     reverse = -1;
-            // }
-            pos = inverse_direction_ ? -pos : pos;
-            // if(mtx.try_lock())
-            // {
-            //     angle = reverse * cur_pos * 360.0 / 10000.0;
-                
-            //     mtx.unlock();
-            // }
-            // double cur_angle = angle;
-            // if (fabs(angle - pos) < 6)
-            // {
-                CanBase::CanTxMsg msg;
-                msg.ExtId   = 0x00;     // not used at all
-                msg.IDE     = CanBase::CAN_ID_STD;
-                msg.RTR     = CanBase::CAN_RTR_DATA;        // data frame
-                msg.StdId   = 0x400 | nodeID_;
-                msg.DLC     = 4; 
-                int32_t temp_pos = pos * 10000.0 / 360.0;
-                *((int32_t *)&msg.Data) = temp_pos;
-
-                // can_bus_->SDO_Write(nodeID, 0x60c1, 0x01, temp_pos, 4);
-                
-                can_bus_->Transmit(msg);
-            // }
-            // else
-            // {
-            //     std::cout << RED_BOLD << "nodeid:" << (int)nodeID << " setAngle to max:"<< _angle<<"cur_angle:"<<cur_angle << RESET_FORMAT << std::endl;
-            // }
-
-        }        
+        return getError();
     }
-    if (error_code == 0x2300)
-        return ERROR_CURRENT_OVERLOAD;
-    return ret;
+    if (isEnable && nimotion_mode == IP_MODE)    
+    {
+        // int reverse = 1;
+        // if(inverse_direction_ && pos < 0.0)
+        // {
+        //     reverse = -1;
+        // }
+        pos = inverse_direction_ ? -pos : pos;
+        // if(mtx.try_lock())
+        // {
+        //     angle = reverse * cur_pos * 360.0 / 10000.0;
+            
+        //     mtx.unlock();
+        // }
+        // double cur_angle = angle;
+        // if (fabs(angle - pos) < 6)
+        // {
+            CanBase::CanTxMsg msg;
+            msg.ExtId   = 0x00;     // not used at all
+            msg.IDE     = CanBase::CAN_ID_STD;
+            msg.RTR     = CanBase::CAN_RTR_DATA;        // data frame
+            msg.StdId   = 0x400 | nodeID_;
+            msg.DLC     = 4; 
+            int32_t temp_pos = pos * resolution / 360.0;
+            *((int32_t *)&msg.Data) = temp_pos;
+
+            // can_bus_->SDO_Write(nodeID, 0x60c1, 0x01, temp_pos, 4);
+            
+            can_bus_->Transmit(msg);
+        // }
+        // else
+        // {
+        //     std::cout << RED_BOLD << "nodeid:" << (int)nodeID << " setAngle to max:"<< _angle<<"cur_angle:"<<cur_angle << RESET_FORMAT << std::endl;
+        // }
+        return 0;
+    }        
+    return -1;
 }
 
 int32_t nimotionMotor::getMotorPosition(double& pos)
 {
-    int32_t ret = CMD_SUCCESS;
-    if (error_code != 0)
+    if (error_code != 0 || !isRecPos)
     {
-        pos = cur_pos * 360.0 / 10000.0;
+        return getError();
     }
-    if (error_code == 0x2300)
-        return ERROR_CURRENT_OVERLOAD;
-    return ret;
+    pos = cur_pos * 360.0 / resolution;
+    return 0;
 }
 
 int32_t nimotionMotor::setEnableStatus(bool enable)
 {
-    int32_t ret = CMD_SUCCESS;
     if (error_code != 0)
     {
-        if (enableCmd != isEnable)
-        {
-            enableCmd = enable;
-            return -1;
-        }
-    }
-    if (error_code == 0x2300)
-        return ERROR_CURRENT_OVERLOAD;
-    return ret;
+        return getError();
+    } 
+    enableCmd = enable;
+    return 0;
 }
 
 int32_t nimotionMotor::getEnableStatus(bool& enable)
 {
-    int32_t ret = CMD_SUCCESS;
     if (error_code != 0)
     {
-        enable = isEnable;
-        run();
+        return getError();
     }
-    if (error_code == 0x2300)
-        return ERROR_CURRENT_OVERLOAD;
-    return ret;
+    run();
+    if (!isOnline)
+        return ERROR_DEVICE_OFFLINE;
+    enable = isEnable;
+    return 0;
 }
 
 int32_t nimotionMotor::setHome()
 {
-    int32_t ret = CMD_SUCCESS;
     if (error_code != 0)
     {
-       homeCmd = true;
+        return getError();
     }
-    if (error_code == 0x2300)
-        return ERROR_CURRENT_OVERLOAD;
-    return ret;
+    homeCmd = true;
+    return 0;
 }
 
 int32_t nimotionMotor::getTorque(double& torque)
 {
-    int32_t ret = CMD_SUCCESS;
-    if (error_code != 0)
+    if (error_code != 0 || !isOnline)
     {
-        torque = sixForce*0.001;
+        return getError();
     }
-    if (error_code == 0x2300)
-        return ERROR_CURRENT_OVERLOAD;
-    return ret;
+    torque = sixForce*0.001;
+    return 0;
 }
 
 int32_t nimotionMotor::getVelocity(double& velocity)
 {
-    int32_t ret = CMD_SUCCESS;
-    if (error_code != 0)
+    if (error_code != 0 || !isOnline)
     {
-        velocity = cur_vel * 6.0;
+        return getError();
     }
-    if (error_code == 0x2300)
-        return ERROR_CURRENT_OVERLOAD;
-    return ret;    
+    velocity = cur_vel * 6.0;
+    return 0;    
+}
+
+int32_t nimotionMotor::getError()
+{
+   int32_t ret = 0;
+   if (error_code)
+   {
+        std::cout << RED_BOLD << "nodeID_:" << (int)nodeID_ << " error:" << std::hex << (uint32_t)error_code <<std::dec << RESET_FORMAT << std::endl;
+   }
+   if (!isRecPos)
+    return ERROR_UNRECIVER_POS;
+   if (!isOnline)
+    return ERROR_DEVICE_OFFLINE;
+   switch(error_code)
+   {
+    case 0x2300: ret = ERROR_CURRENT_OVERLOAD; break;
+   }
+   return ret;
 }

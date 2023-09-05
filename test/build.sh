@@ -12,3 +12,6 @@ make -j8
 cp *.so ../lib/
 popd
 make -j8
+make stepLine
+make disable
+make setHome

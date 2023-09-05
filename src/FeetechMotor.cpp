@@ -35,11 +35,12 @@ int32_t feetechMotor::setMotorPosition(double pos)
     {
         servoDrv.posCmd = Angle_ref;
         servoDrv.velCmd = Vel_ref;
-        servoDrv.accCmd = 250; 
+        servoDrv.accCmd = 0; 
         if (!servoDrv.moveCmd)
         {
-        servoDrv.moveCmd = true;
+            servoDrv.moveCmd = true;
         }
+        
     }
     else
     {
@@ -60,13 +61,15 @@ int32_t feetechMotor::getMotorPosition(double& pos)
 int32_t feetechMotor::setEnableStatus(bool enable)
 {
     std::lock_guard<std::mutex> mylock(servoDrv.mtx);
-    servoDrv.enableCmd = true;
+    servoDrv.enableCmd = enable;
     return CMD_SUCCESS;
 }
 
 int32_t feetechMotor::getEnableStatus(bool& enable)
 {
     std::lock_guard<std::mutex> mylock(servoDrv.mtx);
+    if (!servoDrv.isOnline)
+        return ERROR_DEVICE_OFFLINE;
     enable = servoDrv.isEnable;
     return CMD_SUCCESS;
 }
