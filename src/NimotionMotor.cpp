@@ -550,6 +550,7 @@ int32_t nimotionMotor::setMotorPosition(double pos)
         // {
         //     reverse = -1;
         // }
+        pos = pos * 180 / M_PI;
         pos = inverse_direction_ ? -pos : pos;
         // if(mtx.try_lock())
         // {
@@ -589,6 +590,7 @@ int32_t nimotionMotor::getMotorPosition(double& pos)
         return getError();
     }
     pos = cur_pos * 360.0 / resolution;
+    pos = pos * M_PI / 180;
     return 0;
 }
 
@@ -604,11 +606,12 @@ int32_t nimotionMotor::setEnableStatus(bool enable)
 
 int32_t nimotionMotor::getEnableStatus(bool& enable)
 {
+    run();
     if (error_code != 0)
     {
         return getError();
     }
-    run();
+    
     if (!isOnline)
         return ERROR_DEVICE_OFFLINE;
     enable = isEnable;
