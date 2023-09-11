@@ -41,6 +41,7 @@ int32_t nimotionMotor::init()
 
         last_time = std::chrono::steady_clock::now();
         now_time = last_time;
+        run();//start  node;
 
     }
     return 0;
@@ -183,7 +184,11 @@ void nimotionMotor::run()
                 }
             }
             std::cout << GREEN_BOLD << "NODE_ID:" << (uint32_t)nodeID_ << " HOMING"
-                    << " clear_ack:" << (int32_t)clear_ack << RESET_FORMAT << std::endl;
+            << " clear_ack:" << (int32_t)clear_ack
+            << " cur_pos:"<< cur_pos
+            <<RESET_FORMAT << std::endl;            
+            // std::cout << GREEN_BOLD << "NODE_ID:" << (uint32_t)nodeID_ << " HOMING"
+            //         << " clear_ack:" << (int32_t)clear_ack << RESET_FORMAT << std::endl;
         }
         break;
         case SET_MODE:
@@ -438,13 +443,15 @@ void nimotionMotor::recMsgCallback(CanBase::CanRxMsg msg)
                 //     clear_ack = NULL_CLEAR;
                 //     isHome = false;
                 // }
+                // std::cout<<"clear_ack:"<<clear_ack<<std::endl;
             }
         }
         // std::cout << GREEN_BOLD << "sdo reply:"<<std::hex << (int32_t)msg.Data[0] <<
         // " index:"<<std::hex<<(int32_t)msg.Data[2]<<std::hex<<(int32_t)msg.Data[1] <<
         // " pos_cmd:" <<(int32_t)pos_cmd<<" vel_cmd:"<<(int32_t)vel_cmd<<
         // " sdo_ack:"<<(int32_t)sdo_ack<<" read_pos_cmd:"<<*((int32_t*)&msg.Data[4])<<
-        // " read_vel_cmd:"<<*((int32_t*)&msg.Data[4])<<RESET_FORMAT << std::endl;
+        // " read_vel_cmd:"<<*((int32_t*)&msg.Data[4])
+        // RESET_FORMAT << std::endl;
     }
     break;
     }
@@ -514,6 +521,10 @@ void nimotionMotor::switchState()
                     can_bus_->Transmit(msg);  
                 }
                 nimotion_state = SET_ENABLE;
+            }
+            else
+            {
+                nimotion_state = SWITCH_ON;
             }
         }
     }
@@ -618,14 +629,31 @@ int32_t nimotionMotor::getEnableStatus(bool& enable)
     return 0;
 }
 
-int32_t nimotionMotor::setHome()
+int32_t nimotionMotor::setHome(uint32_t timeout)
 {
     if (error_code != 0)
     {
         return getError();
     }
+    auto setHomeLastTime = std::chrono::steady_clock::now();
+    auto setHomeNowTime = std::chrono::steady_clock::now();
+    auto elapsedTime = setHomeNowTime - setHomeLastTime;
     homeCmd = true;
-    return 0;
+    uint32_t delt = 0;
+    while (delt < timeout && homeCmd)
+    {
+        run();
+        usleep(10000);
+        setHomeNowTime = std::chrono::steady_clock::now();
+        elapsedTime = setHomeNowTime - setHomeLastTime;
+        
+        delt = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedTime).count(); 
+    }
+    if (delt >= timeout)
+    {
+        return ERROR_SET_HOME_TIMEOUT;
+    }
+    return CMD_SUCCESS;
 }
 
 int32_t nimotionMotor::getTorque(double& torque)

@@ -16,7 +16,7 @@ public:
     virtual int32_t getMotorPosition(double& pos) = 0;//读取当前电机位置角度，单位rad,电机出错反馈错误码
     virtual int32_t setEnableStatus(bool enable) = 0;//设置上下使能
     virtual int32_t getEnableStatus(bool& enable) = 0;//获得当前电机使能状态，在发送一条轨迹前需要先判断电机是否已经使能
-    virtual int32_t setHome() = 0; //清0,将当前位置设置为零点
+    virtual int32_t setHome(uint32_t timeout) = 0; //清0,将当前位置设置为零点,超时时间ms
 
     /*以下几个是为了后期碰撞检测按读取力矩处理*/
     virtual int32_t getTorque(double& torque) = 0;//获得当前时刻电机力矩 单位:N*m

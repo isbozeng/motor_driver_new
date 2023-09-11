@@ -15,7 +15,7 @@ public:
     virtual int32_t getMotorPosition(double& pos) override;//读取当前电机位置角度，单位rad,电机出错反馈错误码
     virtual int32_t setEnableStatus(bool enable) override;//设置上下使能
     virtual int32_t getEnableStatus(bool& enable) override;//获得当前电机使能状态，在发送一条轨迹前需要先判断电机是否已经使能
-    virtual int32_t setHome() override; //清0,将当前位置设置为零点
+    virtual int32_t setHome(uint32_t timeout) override; //清0,将当前位置设置为零点
 
     /*以下几个是为了后期碰撞检测按读取力矩处理*/
     virtual int32_t getTorque(double& torque) override;//获得当前时刻电机力矩 单位:N*m

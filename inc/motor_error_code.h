@@ -16,6 +16,7 @@
 #define ERROR_READ_MOTOR_TORQUE 3003   //读取电机扭矩错误
 #define ERROR_READ_MOTOR_VELOCITY 3004   //读取电机速度错误
 #define ERROR_READ_MOTOR_ENABLE_STATUS 3005   //读取电机使能状态错误
+#define ERROR_SET_HOME_TIMEOUT 3006           //清零错误      
 
 #define ERROR_CURRENT_OVERLOAD 4001   //电流过载错误
 

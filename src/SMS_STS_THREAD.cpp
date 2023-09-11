@@ -10,7 +10,7 @@ namespace servo
   SMS_STS_THREAD::SMS_STS_THREAD()
       : th(&SMS_STS_THREAD::thread_f, this), servoCnt(0)
   {
-    begin(115200, "/dev/ttyUSB0");
+    begin(115200, "/dev/feetechMotor");
     th.detach();
   }
   SMS_STS_THREAD::~SMS_STS_THREAD()

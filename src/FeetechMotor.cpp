@@ -76,10 +76,28 @@ int32_t feetechMotor::getEnableStatus(bool& enable)
     return CMD_SUCCESS;
 }
 
-int32_t feetechMotor::setHome()
+int32_t feetechMotor::setHome(uint32_t timeout)
 {
-    std::lock_guard<std::mutex> mylock(servoDrv.mtx);
+    servoDrv.mtx.lock();
     servoDrv.homeCmd = true;
+    servoDrv.mtx.unlock();
+
+    auto setHomeLastTime = std::chrono::steady_clock::now();
+    auto setHomeNowTime = std::chrono::steady_clock::now();
+    auto elapsedTime = setHomeNowTime - setHomeLastTime;
+    uint32_t delt = 0;
+    while (delt < timeout && servoDrv.homeCmd)
+    {
+        usleep(10000);
+        setHomeNowTime = std::chrono::steady_clock::now();
+        elapsedTime = setHomeNowTime - setHomeLastTime;
+        delt = std::chrono::duration_cast<std::chrono::seconds>(elapsedTime).count();  
+    }
+    if (delt >= timeout)
+    {
+        return ERROR_SET_HOME_TIMEOUT;
+    }
+
     return CMD_SUCCESS;
 }
 
