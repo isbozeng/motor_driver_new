@@ -602,6 +602,10 @@ int32_t nimotionMotor::getMotorPosition(double& pos)
     }
     pos = cur_pos * 360.0 / resolution;
     pos = pos * M_PI / 180;
+    if(inverse_direction_)
+    {
+        pos = -pos;
+    }
     return 0;
 }
 

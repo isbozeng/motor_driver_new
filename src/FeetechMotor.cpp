@@ -80,6 +80,8 @@ int32_t feetechMotor::setHome(uint32_t timeout)
 {
     servoDrv.mtx.lock();
     servoDrv.homeCmd = true;
+    servoDrv.posCmd = 2048; //位置指令清零
+    servoDrv.moveCmd = false; //取消移动
     servoDrv.mtx.unlock();
 
     auto setHomeLastTime = std::chrono::steady_clock::now();
