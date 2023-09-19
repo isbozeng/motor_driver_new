@@ -27,6 +27,10 @@ int32_t feetechMotor::init()
 int32_t feetechMotor::setMotorPosition(double pos)
 {
   pos = pos * 180 / M_PI; 
+  if (inverse_direction_)
+  {
+    pos = -pos;
+  }
   uint16_t Angle_ref = (u16)((pos + 180) * (4096.0 / 360.0));
   uint16_t Vel_ref = 0;
   int32_t ret = CMD_SUCCESS;
@@ -56,6 +60,10 @@ int32_t feetechMotor::getMotorPosition(double& pos)
 {
     std::lock_guard<std::mutex> mylock(servoDrv.mtx);
     pos = servoDrv.pos * 0.088 - 180.0;
+    if (inverse_direction_)
+    {
+        pos = -pos;
+    }
     pos = pos * M_PI / 180;
     return CMD_SUCCESS;
 }
